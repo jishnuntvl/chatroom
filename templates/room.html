@@ -60,7 +60,10 @@ body {
 <h2>{{ room.name }} - DjChat</h2>
 
 <div id="display">
-<table>
+  {% for m in msg %}
+  {{m.user}}:{{m.value}}<br>
+  {% endfor %}
+<!--<table>
 <tr>
   <th>name</th>
   <th>message</th>
@@ -73,34 +76,8 @@ body {
   <td>{{m.date}}</td>
 </tr>
 {% endfor %}
-</table>
+</table>-->
 </div>
-
-<!--<script>
-$(document).ready(function(){
-
-setInterval(function(){
-    $.ajax({
-        type: 'GET',
-        url : "/getMessages/{{room}}/",
-        success: function(response){
-            console.log(response);
-            $("#display").empty();
-            for (var key in response.messages)
-            {
-                var temp="<div class='container darker'><b>"+response.messages[key].user+"</b><p>"+response.messages[key].value+"</p><span class='time-left'>"+response.messages[key].date+"</span></div>";
-                $("#display").append(temp);
-            }
-        },
-        error: function(response){
-            alert('An error occured')
-        }
-    });
-},1000);
-})
-</script>-->
-
-
 <div class="container">
     <style>
     input[type=text], select {
@@ -137,63 +114,47 @@ setInterval(function(){
 
     <form id="post-form" method="POST" action="{% url 'msgsnd' room.id username%}">
         {% csrf_token %}
-        <!--<input type="hidden" name="username" id="username" value="{{username}}"/>
-        <input type="hidden" name="room_id" id="room_id" value="{{room_details.id}}"/>-->
         <input type="text" name="message" id="message" width="100px" />
         <input type="submit" value="Send" id="id_message_send_button">
     </form>
 </div>
 <script>
+  // Establish WebSocket connection
   const chatSocket = new WebSocket("ws://" + window.location.host + "/");
-  chatSocket.onopen = function (e) {
-    console.log("The connection was setup successfully !");
-  };
-  chatSocket.onclose = function (e) {
-    console.log("Something unexpected happened !");
-  };
+  
+  // When connection is opened, log success message
+  chatSocket.onopen = () => console.log("Connection established.");
+
+  // When connection is closed unexpectedly, log error message
+  chatSocket.onclose = () => console.log("Connection closed unexpectedly.");
+
+  // Focus on message input field when page loads
   document.querySelector("#message").focus();
-  document.querySelector("#message").onkeyup = function (e) {
-    if (e.keyCode == 13) {
+
+  // Send message when Enter key is pressed
+  /*document.querySelector("#message").onkeyup = (e) => {
+    if (e.keyCode === 13) {
       document.querySelector("#id_message_send_button").click();
     }
+  };*/
+
+  // Send message when send button is clicked
+  document.querySelector("#id_message_send_button").onclick = () => {
+    const messageInput = document.querySelector("#message").value;
+    chatSocket.send(JSON.stringify({ message: messageInput, username: "{{username}}" }));
   };
-  document.querySelector("#id_message_send_button").onclick = function (e) {
-    var messageInput = document.querySelector(
-      "#message"
-    ).value;
-    chatSocket.send(JSON.stringify({ message: messageInput, username : "{{username}}"}));
-  };
-  chatSocket.onmessage = function (e) {
-    const data = JSON.parse(e.data);
-    var div = document.createElement("div");
-    div.innerHTML = data.username + " : " + data.message;
+
+  // Display received messages
+  chatSocket.onmessage = (e) => {
+    const { username, message } = JSON.parse(e.data);
+    const messageDiv = document.createElement("div");
+    messageDiv.textContent = `${username}: ${message}`;
     document.querySelector("#message").value = "";
-    document.querySelector("#display").appendChild(div);
+    document.querySelector("#display").appendChild(messageDiv);
   };
 </script>
 
 
+
 </body>
-<!--
-<script type="text/javascript">
-  $(document).on('submit','#post-form',function(e){
-    e.preventDefault();
-
-    $.ajax({
-      type:'POST',
-      url:'/send',
-      data:{
-          username:$('#username').val(),
-          room_id:$('#room_id').val(),
-          message:$('#message').val(),
-        csrfmiddlewaretoken:$('input[name=csrfmiddlewaretoken]').val(),
-      },
-      success: function(data){
-         //alert(data)
-      }
-    });
-    document.getElementById('message').value = ''
-  });
-</script>-->
-
 </html>
